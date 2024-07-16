@@ -220,15 +220,15 @@ if uploaded_file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# Custom CSS to mark weekends as red
-st.markdown(
-    """
-    <style>
-    [class*="stDatepicker-day--weekday-5"], [class*="stDatepicker-day--weekday-6"] {
-        color: red !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# # Custom CSS to mark weekends as red
+# st.markdown(
+#     """
+#     <style>
+#     [class*="stDatepicker-day--weekday-5"], [class*="stDatepicker-day--weekday-6"] {
+#         color: red !important;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
 
