@@ -127,20 +127,22 @@ def roundUp(number, ndigits=0):
     return type(number)(math.ceil(exp) / 10 ** ndigits)
 
 
-def fetch_data(ticker, start_date, end_date, retries=3):
-    for _ in range(retries):
-        try:
-            yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
-            if not yahoo_data.empty:
-                open_price = yahoo_data["Open"][0].item()
-                high = yahoo_data["High"][0].item()
-                low = yahoo_data["Low"][0].item()
-                close = yahoo_data["Close"][0].item()
-                volume = yahoo_data["Volume"][0].item()
-                return open_price, high, low, close, volume
-        except Exception as e:
-            print(f"Error fetching data for {ticker}: {e}")
-    return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+def fetch_data(ticker, start_date, end_date):
+    try:
+        yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
+        if not yahoo_data.empty:
+            open_price = yahoo_data["Open"][0].item()
+            high = yahoo_data["High"][0].item()
+            low = yahoo_data["Low"][0].item()
+            close = yahoo_data["Close"][0].item()
+            volume = yahoo_data["Volume"][0].item()
+        else:
+            open_price = high = low = close = volume = pd.NA
+    except Exception as e:
+        open_price = high = low = close = volume = pd.NA
+        print(f"Error fetching data for {ticker}: {e}")
+
+    return open_price, high, low, close, volume
 
 
 def process_file(df, selected_date):
@@ -153,7 +155,7 @@ def process_file(df, selected_date):
     volume_list = [pd.NA] * len(df)
 
     progress_text = st.empty()
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor() as executor:
         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
         for i, future in enumerate(as_completed(futures)):
             index = futures[future]
@@ -217,4 +219,5 @@ if uploaded_file:
         with open(output_file_name, "rb") as file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 
