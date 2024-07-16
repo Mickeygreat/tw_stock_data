@@ -18,7 +18,7 @@ def roundUp(number, ndigits=0):
     return type(number)(math.ceil(exp) / 10 ** ndigits)
 
 
-def process_file(df):
+def process_file(df, selected_date):
     open_list = []
     high_list = []
     low_list = []
@@ -28,12 +28,17 @@ def process_file(df):
     for i in range(len(df)):
         try:
             ticker = df["代號"][i]
-            yahoo_data = yf.download(f"{ticker}.TW", period="1d")
-            open_price = yahoo_data["Open"][0].item()
-            high = yahoo_data["High"][0].item()
-            low = yahoo_data["Low"][0].item()
-            close = yahoo_data["Close"][0].item()
-            volume = yahoo_data["Volume"][0].item()
+            start_date = selected_date
+            end_date = start_date + datetime.timedelta(days=1)
+            yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
+            if not yahoo_data.empty:
+                open_price = yahoo_data["Open"][0].item()
+                high = yahoo_data["High"][0].item()
+                low = yahoo_data["Low"][0].item()
+                close = yahoo_data["Close"][0].item()
+                volume = yahoo_data["Volume"][0].item()
+            else:
+                open_price = high = low = close = volume = pd.NA
 
             open_list.append(open_price)
             high_list.append(high)
@@ -72,23 +77,27 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file)
     st.write(df)
 
-    start_time = datetime.datetime.now()
-    st.write("Processing file...")
-    progress_bar = st.progress(0)
+    selected_date = st.date_input("Select a date", value=datetime.date.today())
+    st.write(f"Selected date: {selected_date}")
 
-    processed_df = process_file(df)
+    if st.button("Process File"):
+        start_time = datetime.datetime.now()
+        st.write("Processing file...")
+        progress_bar = st.progress(0)
 
-    end_time = datetime.datetime.now()
-    runtime = end_time - start_time
+        processed_df = process_file(df, selected_date)
 
-    st.write("Processed Data:")
-    st.write(processed_df)
+        end_time = datetime.datetime.now()
+        runtime = end_time - start_time
 
-    st.write(f"Runtime: {runtime}")
+        st.write("Processed Data:")
+        st.write(processed_df)
 
-    # Option to download the processed file
-    output_file_name = "processed_data.xlsx"
-    processed_df.to_excel(output_file_name, index=False)
-    with open(output_file_name, "rb") as file:
-        btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
-                                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.write(f"Runtime: {runtime}")
+
+        # Option to download the processed file
+        output_file_name = "processed_data.xlsx"
+        processed_df.to_excel(output_file_name, index=False)
+        with open(output_file_name, "rb") as file:
+            btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
+                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
