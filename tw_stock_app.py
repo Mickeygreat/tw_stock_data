@@ -136,13 +136,12 @@ def fetch_data(ticker, start_date, end_date):
             low = yahoo_data["Low"][0].item()
             close = yahoo_data["Close"][0].item()
             volume = yahoo_data["Volume"][0].item()
+            return open_price, high, low, close, volume
         else:
-            open_price = high = low = close = volume = pd.NA
+            return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
     except Exception as e:
-        open_price = high = low = close = volume = pd.NA
         print(f"Error fetching data for {ticker}: {e}")
-
-    return open_price, high, low, close, volume
+        return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
 
 
 def process_file(df, selected_date):
@@ -159,12 +158,16 @@ def process_file(df, selected_date):
         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
         for i, future in enumerate(as_completed(futures)):
             index = futures[future]
-            open_price, high, low, close, volume = future.result()
-            open_list[index] = open_price
-            high_list[index] = high
-            low_list[index] = low
-            close_list[index] = close
-            volume_list[index] = volume
+            try:
+                open_price, high, low, close, volume = future.result()
+                open_list[index] = open_price
+                high_list[index] = high
+                low_list[index] = low
+                close_list[index] = close
+                volume_list[index] = volume
+            except Exception as e:
+                print(f"Error processing future result: {e}")
+            
             progress = (i + 1) / len(df)
             progress_bar.progress(progress)
             progress_text.text(f"{int(progress * 100)}% completed")
@@ -219,5 +222,6 @@ if uploaded_file:
         with open(output_file_name, "rb") as file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 
 
