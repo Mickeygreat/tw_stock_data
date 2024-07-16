@@ -3,6 +3,8 @@ import pandas as pd
 import yfinance as yf
 import datetime
 import warnings
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Suppress warnings from yfinance
 warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
@@ -102,3 +104,19 @@ if uploaded_file:
         with open(output_file_name, "rb") as file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+        # Plotting the results
+        st.write("### Open, High, Low, Close Prices Over Time")
+        fig, ax = plt.subplots()
+        processed_df.plot(x='代號', y=['Open', 'High', 'Low', 'Close'], kind='line', ax=ax)
+        st.pyplot(fig)
+
+        st.write("### Volume of Stocks Traded")
+        fig, ax = plt.subplots()
+        processed_df.plot(x='代號', y='Volume', kind='bar', ax=ax)
+        st.pyplot(fig)
+
+        st.write("### Boxplot of Prices")
+        fig, ax = plt.subplots()
+        sns.boxplot(data=processed_df[['Open', 'High', 'Low', 'Close']], ax=ax)
+        st.pyplot(fig)
