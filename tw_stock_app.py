@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-import time
-import math
 import datetime
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -30,8 +28,9 @@ def fetch_data(ticker, start_date, end_date):
             volume = yahoo_data["Volume"][0].item()
         else:
             open_price = high = low = close = volume = pd.NA
-    except Exception:
+    except Exception as e:
         open_price = high = low = close = volume = pd.NA
+        print(f"Error fetching data for {ticker}: {e}")
 
     return open_price, high, low, close, volume
 
@@ -39,22 +38,22 @@ def fetch_data(ticker, start_date, end_date):
 def process_file(df, selected_date):
     start_date = selected_date
     end_date = start_date + datetime.timedelta(days=1)
-    open_list = []
-    high_list = []
-    low_list = []
-    close_list = []
-    volume_list = []
+    open_list = [pd.NA] * len(df)
+    high_list = [pd.NA] * len(df)
+    low_list = [pd.NA] * len(df)
+    close_list = [pd.NA] * len(df)
+    volume_list = [pd.NA] * len(df)
 
     with ThreadPoolExecutor() as executor:
         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
         for future in as_completed(futures):
             i = futures[future]
             open_price, high, low, close, volume = future.result()
-            open_list.append(open_price)
-            high_list.append(high)
-            low_list.append(low)
-            close_list.append(close)
-            volume_list.append(volume)
+            open_list[i] = open_price
+            high_list[i] = high
+            low_list[i] = low
+            close_list[i] = close
+            volume_list[i] = volume
             progress_bar.progress((i + 1) / len(df))
 
     df["Open"] = open_list
