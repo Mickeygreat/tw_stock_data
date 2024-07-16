@@ -3,7 +3,6 @@ import pandas as pd
 import yfinance as yf
 import datetime
 import warnings
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Suppress warnings from yfinance
 warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
@@ -17,45 +16,40 @@ def roundUp(number, ndigits=0):
     return type(number)(math.ceil(exp) / 10 ** ndigits)
 
 
-def fetch_data(ticker, start_date, end_date, retries=3):
-    for _ in range(retries):
+def process_file(df, selected_date):
+    open_list = []
+    high_list = []
+    low_list = []
+    close_list = []
+    volume_list = []
+
+    for i in range(len(df)):
         try:
-            yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
+            ticker = df["代號"][i]
+            yahoo_data = yf.download(f"{ticker}.TW", start=selected_date, end=selected_date + datetime.timedelta(days=1))
             if not yahoo_data.empty:
                 open_price = yahoo_data["Open"][0].item()
                 high = yahoo_data["High"][0].item()
                 low = yahoo_data["Low"][0].item()
                 close = yahoo_data["Close"][0].item()
                 volume = yahoo_data["Volume"][0].item()
-                return open_price, high, low, close, volume
-        except Exception as e:
-            print(f"Error fetching data for {ticker}: {e}")
-    return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+            else:
+                open_price = high = low = close = volume = pd.NA
+            open_list.append(open_price)
+            high_list.append(high)
+            low_list.append(low)
+            close_list.append(close)
+            volume_list.append(volume)
+        except Exception:
+            open_list.append(pd.NA)
+            high_list.append(pd.NA)
+            low_list.append(pd.NA)
+            close_list.append(pd.NA)
+            volume_list.append(pd.NA)
 
-
-def process_file(df, selected_date):
-    start_date = selected_date
-    end_date = start_date + datetime.timedelta(days=1)
-    open_list = [pd.NA] * len(df)
-    high_list = [pd.NA] * len(df)
-    low_list = [pd.NA] * len(df)
-    close_list = [pd.NA] * len(df)
-    volume_list = [pd.NA] * len(df)
-
-    progress_text = st.empty()
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
-        for i, future in enumerate(as_completed(futures)):
-            index = futures[future]
-            open_price, high, low, close, volume = future.result()
-            open_list[index] = open_price
-            high_list[index] = high
-            low_list[index] = low
-            close_list[index] = close
-            volume_list[index] = volume
-            progress = (i + 1) / len(df)
-            progress_bar.progress(progress)
-            progress_text.text(f"{int(progress * 100)}% completed")
+        progress = (i + 1) / len(df)
+        progress_bar.progress(progress)
+        progress_text.text(f"{int(progress * 100)}% completed")
 
     df["Open"] = open_list
     df["High"] = high_list
@@ -87,6 +81,7 @@ if uploaded_file:
         start_time = datetime.datetime.now()
         st.write("Processing file...")
         progress_bar = st.progress(0)
+        progress_text = st.empty()
 
         processed_df = process_file(df, selected_date)
 
