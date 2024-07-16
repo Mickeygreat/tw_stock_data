@@ -16,43 +16,34 @@ def process_file(df, selected_date):
     failed_tickers = []
 
     tickers = df["代號"].tolist()
-    batch_size = 10  # Adjust batch size based on API limits and performance
 
-    for i in range(0, len(tickers), batch_size):
-        batch_tickers = tickers[i:i + batch_size]
+    for i, ticker in enumerate(tickers):
         try:
-            yahoo_data = yf.download(" ".join([f"{ticker}.TW" for ticker in batch_tickers]), start=selected_date, end=selected_date + datetime.timedelta(days=1))
+            yahoo_data = yf.download(f"{ticker}.TW", start=selected_date, end=selected_date + datetime.timedelta(days=1))
             if not yahoo_data.empty:
-                for ticker in batch_tickers:
-                    if ticker in yahoo_data.columns.levels[1]:
-                        open_list.append(yahoo_data[ticker]['Open'][0])
-                        high_list.append(yahoo_data[ticker]['High'][0])
-                        low_list.append(yahoo_data[ticker]['Low'][0])
-                        close_list.append(yahoo_data[ticker]['Close'][0])
-                        volume_list.append(yahoo_data[ticker]['Volume'][0])
-                    else:
-                        open_list.append(pd.NA)
-                        high_list.append(pd.NA)
-                        low_list.append(pd.NA)
-                        close_list.append(pd.NA)
-                        volume_list.append(pd.NA)
-                        failed_tickers.append(ticker)
+                open_price = yahoo_data["Open"][0]
+                high = yahoo_data["High"][0]
+                low = yahoo_data["Low"][0]
+                close = yahoo_data["Close"][0]
+                volume = yahoo_data["Volume"][0]
             else:
-                open_list.extend([pd.NA] * len(batch_tickers))
-                high_list.extend([pd.NA] * len(batch_tickers))
-                low_list.extend([pd.NA] * len(batch_tickers))
-                close_list.extend([pd.NA] * len(batch_tickers))
-                volume_list.extend([pd.NA] * len(batch_tickers))
-                failed_tickers.extend(batch_tickers)
+                open_price = high = low = close = volume = pd.NA
+            
+            open_list.append(open_price)
+            high_list.append(high)
+            low_list.append(low)
+            close_list.append(close)
+            volume_list.append(volume)
+        
         except Exception:
-            open_list.extend([pd.NA] * len(batch_tickers))
-            high_list.extend([pd.NA] * len(batch_tickers))
-            low_list.extend([pd.NA] * len(batch_tickers))
-            close_list.extend([pd.NA] * len(batch_tickers))
-            volume_list.extend([pd.NA] * len(batch_tickers))
-            failed_tickers.extend(batch_tickers)
+            open_list.append(pd.NA)
+            high_list.append(pd.NA)
+            low_list.append(pd.NA)
+            close_list.append(pd.NA)
+            volume_list.append(pd.NA)
+            failed_tickers.append(ticker)
 
-        progress = (i + batch_size) / len(tickers)
+        progress = (i + 1) / len(tickers)
         progress_bar.progress(progress)
         progress_text.text(f"{int(progress * 100)}% completed")
 
