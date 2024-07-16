@@ -44,6 +44,7 @@ def process_file(df, selected_date):
     close_list = [pd.NA] * len(df)
     volume_list = [pd.NA] * len(df)
 
+    progress_text = st.empty()
     with ThreadPoolExecutor() as executor:
         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
         for i, future in enumerate(as_completed(futures)):
@@ -56,7 +57,7 @@ def process_file(df, selected_date):
             volume_list[index] = volume
             progress = (i + 1) / len(df)
             progress_bar.progress(progress)
-            st.write(f"{int(progress * 100)}% completed")
+            progress_text.text(f"{int(progress * 100)}% completed")
 
     df["Open"] = open_list
     df["High"] = high_list
