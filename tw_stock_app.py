@@ -46,15 +46,17 @@ def process_file(df, selected_date):
 
     with ThreadPoolExecutor() as executor:
         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
-        for future in as_completed(futures):
-            i = futures[future]
+        for i, future in enumerate(as_completed(futures)):
+            index = futures[future]
             open_price, high, low, close, volume = future.result()
-            open_list[i] = open_price
-            high_list[i] = high
-            low_list[i] = low
-            close_list[i] = close
-            volume_list[i] = volume
-            progress_bar.progress((i + 1) / len(df))
+            open_list[index] = open_price
+            high_list[index] = high
+            low_list[index] = low
+            close_list[index] = close
+            volume_list[index] = volume
+            progress = (i + 1) / len(df)
+            progress_bar.progress(progress)
+            st.write(f"{int(progress * 100)}% completed")
 
     df["Open"] = open_list
     df["High"] = high_list
@@ -78,7 +80,8 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file)
     st.write(df)
 
-    selected_date = st.date_input("Select a date", value=datetime.date.today())
+    max_date = datetime.date.today()
+    selected_date = st.date_input("Select a date", value=max_date, max_value=max_date)
     st.write(f"Selected date: {selected_date}")
 
     if st.button("Process File"):
@@ -95,6 +98,9 @@ if uploaded_file:
         st.write(processed_df)
 
         st.write(f"Runtime: {runtime}")
+
+        # Change progress bar color to green
+        st.success('Processing complete!')
 
         # Option to download the processed file
         output_file_name = "processed_data.xlsx"
