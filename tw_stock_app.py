@@ -108,15 +108,13 @@
 
 
 ###--- Fastest Code: But Yahoo Finance API has issue processing that fast ---###
-
-
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 import datetime
 import math
 import warnings
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 # Suppress warnings from yfinance
 warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
@@ -184,8 +182,7 @@ uploaded_file = st.file_uploader(
 if uploaded_file:
     st.write("Uploaded Data:")
     if uploaded_file.name.endswith('.xlsx'):
-        df = pd.read_excel(uploaded_file, dtype={
-                           "代號": str}, index_col=None, engine="openpyxl")
+        df = pd.read_excel(uploaded_file, dtype={"代號": str}, index_col=None, engine="openpyxl")
     else:
         df = pd.read_csv(uploaded_file, dtype={"代號": str})
 
@@ -193,8 +190,11 @@ if uploaded_file:
 
     max_date = datetime.date.today()
     selected_date = st.date_input(
-        "Select a date", value=max_date, max_value=max_date)
-    st.write(f"Selected date: {selected_date}")
+        "Select a date", value=max_date, max_value=max_date, help="Weekends will return no values")
+    
+    # Display a warning if the selected date is a weekend
+    if selected_date.weekday() >= 5:
+        st.warning("Selected date is a weekend. Weekends will return no values.")
 
     if st.button("Process File"):
         start_time = datetime.datetime.now()
@@ -219,3 +219,16 @@ if uploaded_file:
         with open(output_file_name, "rb") as file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# Custom CSS to mark weekends as red
+st.markdown(
+    """
+    <style>
+    [class*="stDatepicker-day--weekday-5"], [class*="stDatepicker-day--weekday-6"] {
+        color: red !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
