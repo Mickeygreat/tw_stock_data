@@ -28,11 +28,12 @@ def process_file(df, selected_date):
             ticker = df["代號"][i]
             yahoo_data = yf.download(f"{ticker}.TW", start=selected_date, end=selected_date + datetime.timedelta(days=1))
             if not yahoo_data.empty:
-                open_price = yahoo_data["Open"][0].item()
-                high = yahoo_data["High"][0].item()
-                low = yahoo_data["Low"][0].item()
-                close = yahoo_data["Close"][0].item()
-                volume = yahoo_data["Volume"][0].item()
+                open_price = yahoo_data["Open"].iloc[0].item()
+                high = yahoo_data["High"].iloc[0].item()
+                low = yahoo_data["Low"].iloc[0].item()
+                close = yahoo_data["Close"].iloc[0].item()
+                volume = yahoo_data["Volume"].iloc[0].item()
+
             else:
                 open_price = high = low = close = volume = pd.NA
             open_list.append(open_price)
@@ -131,11 +132,11 @@ if uploaded_file:
 #     try:
 #         yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
 #         if not yahoo_data.empty:
-#             open_price = yahoo_data["Open"][0].item()
-#             high = yahoo_data["High"][0].item()
-#             low = yahoo_data["Low"][0].item()
-#             close = yahoo_data["Close"][0].item()
-#             volume = yahoo_data["Volume"][0].item()
+            # open_price = yahoo_data["Open"].iloc[0].item()
+            # high = yahoo_data["High"].iloc[0].item()
+            # low = yahoo_data["Low"].iloc[0].item()
+            # close = yahoo_data["Close"].iloc[0].item()
+            # volume = yahoo_data["Volume"].iloc[0].item()
 #             return open_price, high, low, close, volume
 #         else:
 #             return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
