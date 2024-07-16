@@ -53,7 +53,7 @@ def process_file(df, selected_date):
     df["Close"] = close_list
     df["Volume"] = volume_list
 
-    st.write(f"Failed to fetch data for tickers: {failed_tickers}")
+    # st.write(f"Failed to fetch data for tickers: {failed_tickers}")
 
     return df
 
