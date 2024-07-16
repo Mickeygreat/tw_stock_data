@@ -7,43 +7,47 @@ import warnings
 # Suppress warnings from yfinance
 warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
 
+
+def roundUp(number, ndigits=0):
+    """Always round off"""
+    exp = number * 10 ** ndigits
+    if abs(exp) - abs(math.floor(exp)) < 0.5:
+        return type(number)(math.floor(exp) / 10 ** ndigits)
+    return type(number)(math.ceil(exp) / 10 ** ndigits)
+
+
 def process_file(df, selected_date):
     open_list = []
     high_list = []
     low_list = []
     close_list = []
     volume_list = []
-    failed_tickers = []
 
-    tickers = df["代號"].tolist()
-
-    for i, ticker in enumerate(tickers):
+    for i in range(len(df)):
         try:
+            ticker = df["代號"][i]
             yahoo_data = yf.download(f"{ticker}.TW", start=selected_date, end=selected_date + datetime.timedelta(days=1))
             if not yahoo_data.empty:
-                open_price = yahoo_data["Open"][0]
-                high = yahoo_data["High"][0]
-                low = yahoo_data["Low"][0]
-                close = yahoo_data["Close"][0]
-                volume = yahoo_data["Volume"][0]
+                open_price = yahoo_data["Open"][0].item()
+                high = yahoo_data["High"][0].item()
+                low = yahoo_data["Low"][0].item()
+                close = yahoo_data["Close"][0].item()
+                volume = yahoo_data["Volume"][0].item()
             else:
                 open_price = high = low = close = volume = pd.NA
-            
             open_list.append(open_price)
             high_list.append(high)
             low_list.append(low)
             close_list.append(close)
             volume_list.append(volume)
-        
         except Exception:
             open_list.append(pd.NA)
             high_list.append(pd.NA)
             low_list.append(pd.NA)
             close_list.append(pd.NA)
             volume_list.append(pd.NA)
-            failed_tickers.append(ticker)
 
-        progress = (i + 1) / len(tickers)
+        progress = (i + 1) / len(df)
         progress_bar.progress(progress)
         progress_text.text(f"{int(progress * 100)}% completed")
 
@@ -52,8 +56,6 @@ def process_file(df, selected_date):
     df["Low"] = low_list
     df["Close"] = close_list
     df["Volume"] = volume_list
-
-    # st.write(f"Failed to fetch data for tickers: {failed_tickers}")
 
     return df
 
