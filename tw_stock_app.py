@@ -113,65 +113,57 @@ if uploaded_file:
 # import pandas as pd
 # import yfinance as yf
 # import datetime
+# import math
 # import warnings
-# from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # # Suppress warnings from yfinance
 # warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
 
 
-# def roundUp(number, ndigits=0):
-#     """Always round off"""
-#     exp = number * 10 ** ndigits
-#     if abs(exp) - abs(math.floor(exp)) < 0.5:
-#         return type(number)(math.floor(exp) / 10 ** ndigits)
-#     return type(number)(math.ceil(exp) / 10 ** ndigits)
-
-
 # def fetch_data(ticker, start_date, end_date):
 #     try:
-#         yahoo_data = yf.download(f"{ticker}.TW", start=start_date, end=end_date)
+#         yahoo_data = yf.download(
+#             f"{ticker}.TW", start=start_date, end=end_date)
 #         if not yahoo_data.empty:
-            # open_price = yahoo_data["Open"].iloc[0].item()
-            # high = yahoo_data["High"].iloc[0].item()
-            # low = yahoo_data["Low"].iloc[0].item()
-            # close = yahoo_data["Close"].iloc[0].item()
-            # volume = yahoo_data["Volume"].iloc[0].item()
-#             return open_price, high, low, close, volume
+#             return yahoo_data.iloc[0].to_dict()
 #         else:
-#             return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+#             return {"Open": pd.NA, "High": pd.NA, "Low": pd.NA, "Close": pd.NA, "Volume": pd.NA}
 #     except Exception as e:
 #         print(f"Error fetching data for {ticker}: {e}")
-#         return pd.NA, pd.NA, pd.NA, pd.NA, pd.NA
+#         return {"Open": pd.NA, "High": pd.NA, "Low": pd.NA, "Close": pd.NA, "Volume": pd.NA}
 
 
 # def process_file(df, selected_date):
+#     tickers = df["代號"].tolist()
 #     start_date = selected_date
-#     end_date = start_date + datetime.timedelta(days=1)
-#     open_list = [pd.NA] * len(df)
-#     high_list = [pd.NA] * len(df)
-#     low_list = [pd.NA] * len(df)
-#     close_list = [pd.NA] * len(df)
-#     volume_list = [pd.NA] * len(df)
+#     end_date = selected_date + datetime.timedelta(days=1)
+
+#     open_list = []
+#     high_list = []
+#     low_list = []
+#     close_list = []
+#     volume_list = []
 
 #     progress_text = st.empty()
-#     with ThreadPoolExecutor() as executor:
-#         futures = {executor.submit(fetch_data, df["代號"][i], start_date, end_date): i for i in range(len(df))}
-#         for i, future in enumerate(as_completed(futures)):
-#             index = futures[future]
-#             try:
-#                 open_price, high, low, close, volume = future.result()
-#                 open_list[index] = open_price
-#                 high_list[index] = high
-#                 low_list[index] = low
-#                 close_list[index] = close
-#                 volume_list[index] = volume
-#             except Exception as e:
-#                 print(f"Error processing future result: {e}")
-            
-#             progress = (i + 1) / len(df)
-#             progress_bar.progress(progress)
-#             progress_text.text(f"{int(progress * 100)}% completed")
+#     for i, ticker in enumerate(tickers):
+#         try:
+#             data = fetch_data(ticker, start_date, end_date)
+#             open_list.append(data.get("Open"))
+#             high_list.append(data.get("High"))
+#             low_list.append(data.get("Low"))
+#             close_list.append(data.get("Close"))
+#             volume_list.append(data.get("Volume"))
+#         except Exception as e:
+#             print(f"Error processing ticker {ticker}: {e}")
+#             open_list.append(pd.NA)
+#             high_list.append(pd.NA)
+#             low_list.append(pd.NA)
+#             close_list.append(pd.NA)
+#             volume_list.append(pd.NA)
+
+#         # Update progress
+#         progress = (i + 1) / len(tickers)
+#         progress_text.text(f"Fetching data: {int(progress * 100)}% completed")
 
 #     df["Open"] = open_list
 #     df["High"] = high_list
@@ -185,24 +177,27 @@ if uploaded_file:
 # # Streamlit app
 # st.title("Financial Data Processor")
 
-# uploaded_file = st.file_uploader("Upload an Excel or CSV file", type=["xlsx", "csv"])
+# uploaded_file = st.file_uploader(
+#     "Upload an Excel or CSV file", type=["xlsx", "csv"])
 
 # if uploaded_file:
 #     st.write("Uploaded Data:")
 #     if uploaded_file.name.endswith('.xlsx'):
-#         df = pd.read_excel(uploaded_file, index_col=None, engine="openpyxl")
+#         df = pd.read_excel(uploaded_file, dtype={
+#                            "代號": str}, index_col=None, engine="openpyxl")
 #     else:
-#         df = pd.read_csv(uploaded_file)
+#         df = pd.read_csv(uploaded_file, dtype={"代號": str})
 #     st.write(df)
 
 #     max_date = datetime.date.today()
-#     selected_date = st.date_input("Select a date", value=max_date, max_value=max_date)
+#     selected_date = st.date_input(
+#         "Select a date", value=max_date, max_value=max_date)
 #     st.write(f"Selected date: {selected_date}")
 
 #     if st.button("Process File"):
 #         start_time = datetime.datetime.now()
 #         st.write("Processing file...")
-#         progress_bar = st.progress(0)
+#         progress_text = st.empty()
 
 #         processed_df = process_file(df, selected_date)
 
@@ -214,8 +209,8 @@ if uploaded_file:
 
 #         st.write(f"Runtime: {runtime}")
 
-#         # Change progress bar color to green
-#         st.success('Processing complete!')
+#         # Change progress text to indicate completion
+#         progress_text.text("Data fetching completed!")
 
 #         # Option to download the processed file
 #         output_file_name = "processed_data.xlsx"
