@@ -3,20 +3,9 @@ import pandas as pd
 import yfinance as yf
 import datetime
 import warnings
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Suppress warnings from yfinance
 warnings.filterwarnings("ignore", category=UserWarning, module="yfinance")
-
-
-def roundUp(number, ndigits=0):
-    """Always round off"""
-    exp = number * 10 ** ndigits
-    if abs(exp) - abs(math.floor(exp)) < 0.5:
-        return type(number)(math.floor(exp) / 10 ** ndigits)
-    return type(number)(math.ceil(exp) / 10 ** ndigits)
-
 
 def process_file(df, selected_date):
     open_list = []
@@ -24,32 +13,46 @@ def process_file(df, selected_date):
     low_list = []
     close_list = []
     volume_list = []
+    failed_tickers = []
 
-    for i in range(len(df)):
+    tickers = df["代號"].tolist()
+    batch_size = 10  # Adjust batch size based on API limits and performance
+
+    for i in range(0, len(tickers), batch_size):
+        batch_tickers = tickers[i:i + batch_size]
         try:
-            ticker = df["代號"][i]
-            yahoo_data = yf.download(f"{ticker}.TW", start=selected_date, end=selected_date + datetime.timedelta(days=1))
+            yahoo_data = yf.download(" ".join([f"{ticker}.TW" for ticker in batch_tickers]), start=selected_date, end=selected_date + datetime.timedelta(days=1))
             if not yahoo_data.empty:
-                open_price = yahoo_data["Open"][0].item()
-                high = yahoo_data["High"][0].item()
-                low = yahoo_data["Low"][0].item()
-                close = yahoo_data["Close"][0].item()
-                volume = yahoo_data["Volume"][0].item()
+                for ticker in batch_tickers:
+                    if ticker in yahoo_data.columns.levels[1]:
+                        open_list.append(yahoo_data[ticker]['Open'][0])
+                        high_list.append(yahoo_data[ticker]['High'][0])
+                        low_list.append(yahoo_data[ticker]['Low'][0])
+                        close_list.append(yahoo_data[ticker]['Close'][0])
+                        volume_list.append(yahoo_data[ticker]['Volume'][0])
+                    else:
+                        open_list.append(pd.NA)
+                        high_list.append(pd.NA)
+                        low_list.append(pd.NA)
+                        close_list.append(pd.NA)
+                        volume_list.append(pd.NA)
+                        failed_tickers.append(ticker)
             else:
-                open_price = high = low = close = volume = pd.NA
-            open_list.append(open_price)
-            high_list.append(high)
-            low_list.append(low)
-            close_list.append(close)
-            volume_list.append(volume)
+                open_list.extend([pd.NA] * len(batch_tickers))
+                high_list.extend([pd.NA] * len(batch_tickers))
+                low_list.extend([pd.NA] * len(batch_tickers))
+                close_list.extend([pd.NA] * len(batch_tickers))
+                volume_list.extend([pd.NA] * len(batch_tickers))
+                failed_tickers.extend(batch_tickers)
         except Exception:
-            open_list.append(pd.NA)
-            high_list.append(pd.NA)
-            low_list.append(pd.NA)
-            close_list.append(pd.NA)
-            volume_list.append(pd.NA)
+            open_list.extend([pd.NA] * len(batch_tickers))
+            high_list.extend([pd.NA] * len(batch_tickers))
+            low_list.extend([pd.NA] * len(batch_tickers))
+            close_list.extend([pd.NA] * len(batch_tickers))
+            volume_list.extend([pd.NA] * len(batch_tickers))
+            failed_tickers.extend(batch_tickers)
 
-        progress = (i + 1) / len(df)
+        progress = (i + batch_size) / len(tickers)
         progress_bar.progress(progress)
         progress_text.text(f"{int(progress * 100)}% completed")
 
@@ -58,6 +61,8 @@ def process_file(df, selected_date):
     df["Low"] = low_list
     df["Close"] = close_list
     df["Volume"] = volume_list
+
+    st.write(f"Failed to fetch data for tickers: {failed_tickers}")
 
     return df
 
@@ -104,19 +109,3 @@ if uploaded_file:
         with open(output_file_name, "rb") as file:
             btn = st.download_button(label="Download Processed Data", data=file, file_name=output_file_name,
                                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        # Plotting the results
-        st.write("### Open, High, Low, Close Prices Over Time")
-        fig, ax = plt.subplots()
-        processed_df.plot(x='代號', y=['Open', 'High', 'Low', 'Close'], kind='line', ax=ax)
-        st.pyplot(fig)
-
-        st.write("### Volume of Stocks Traded")
-        fig, ax = plt.subplots()
-        processed_df.plot(x='代號', y='Volume', kind='bar', ax=ax)
-        st.pyplot(fig)
-
-        st.write("### Boxplot of Prices")
-        fig, ax = plt.subplots()
-        sns.boxplot(data=processed_df[['Open', 'High', 'Low', 'Close']], ax=ax)
-        st.pyplot(fig)
